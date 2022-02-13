@@ -210,7 +210,8 @@ def _hier_integerizer(module, **kwargs):
     elif (module.__class__.__name__ == "PACT_Act"):
         module = PACT_IntegerAct(precision=module.precision, eps_in=module.eps_in, eps_out=module.eps_static, alpha=module.alpha_static, **kwargs)
         module.set_output_eps(**kwargs)
-    elif (module.__class__.__name__ == "PACT_IntegerAdd"):
+    elif (module.__class__.__name__ == "PACT_IntegerAdd" or \
+          module.__class__.__name__ == "PACT_IntegerConcat"):
         module.integerized = True
     elif (module.__class__.__name__ == "AvgPool2d"):
         module = PACT_IntegerAvgPool2d(module.kernel_size, stride=module.stride, padding=module.padding, ceil_mode=module.ceil_mode,

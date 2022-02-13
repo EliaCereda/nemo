@@ -82,6 +82,7 @@ def _set_deployment_pact(self, eps_in, only_activations=False, **kwargs):
             (not only_activations and m.__class__.__name__ == "PACT_Conv1d") or \
             (not only_activations and m.__class__.__name__ == "PACT_Linear") or \
             (not only_activations and m.__class__.__name__ == "PACT_IntegerAdd") or \
+            (not only_activations and m.__class__.__name__ == "PACT_IntegerConcat") or \
                                       m.__class__.__name__ == "PACT_Act"):
             m.deployment = True
         if (m.__class__.__name__ == "PACT_Act"):
@@ -103,7 +104,8 @@ def _set_eps_in_pact(self, eps_in):
             m.eps_in = torch.tensor(self.get_eps_at(n, eps_in).item(), requires_grad=False)
         if (m.__class__.__name__ == "PACT_QuantizedBatchNormNd"):
             m.eps_in = torch.tensor(self.get_eps_at(n, eps_in).item(), requires_grad=False)
-        if (m.__class__.__name__ == "PACT_IntegerAdd"):
+        if ((m.__class__.__name__ == "PACT_IntegerAdd") or \
+            (m.__class__.__name__ == "PACT_IntegerConcat")):
             eps_in_tmp = self.get_eps_at(n, eps_in)
             eps_in_list = []
             for eps in eps_in_tmp:
@@ -168,4 +170,3 @@ def _id_stage(self, eps_in=None, **kwargs):
     if eps_in is None:
         eps_in = self.eps_in
     nemo.transform.integerize_pact(self, eps_in=eps_in, **kwargs)
-
