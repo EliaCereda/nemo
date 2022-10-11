@@ -46,7 +46,7 @@ def _hier_get_name_from_child(module, child, name):
             return name_plus_n
         elif len(list(m.named_children())) > 0:
             name_child = _hier_get_name_from_child(m, child, name_plus_n)
-            if name_child is not '':
+            if name_child != '':
                 return name_child
     return ''
 
@@ -138,9 +138,15 @@ class DeployGraph(object):
         else:
             with scope_name_workaround(module):
                 try:
+                    # PyTorch < 1.5.0
                     graph, _params_dict, _torch_out = torch.onnx.utils._model_to_graph(module, dummy_input, propagate=True, _retain_param_name=True)
                 except TypeError:
-                    graph, _params_dict, _torch_out = torch.onnx.utils._model_to_graph(module, dummy_input, _retain_param_name=True)
+                    try:
+                        # Support for PyTorch >= 1.7.0: export in TRAINING mode to disable conv-bn fusion
+                        graph, _params_dict, _torch_out = torch.onnx.utils._model_to_graph(module, dummy_input, _retain_param_name=True, training=torch.onnx.TrainingMode.TRAINING)
+                    except TypeError:
+                        # Support for PyTorch >= 1.5.0 and < 1.7.0
+                        graph, _params_dict, _torch_out = torch.onnx.utils._model_to_graph(module, dummy_input, _retain_param_name=True)
         input_dict = {}
         output_dict = {}
         self.non_unique_names_dict = {}
