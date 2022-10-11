@@ -31,6 +31,7 @@ from torch.onnx.symbolic_helper import parse_args
 
 DEFAULT_ACT_REQNT_FACTOR  = 32
 DEFAULT_ADD_REQNT_FACTOR  = 32
+DEFAULT_CONCAT_REQNT_FACTOR  = 32
 DEFAULT_POOL_REQNT_FACTOR = 32
 DEFAULT_QBATCHNORM_PREC = 12
 QD_REQUANT_DEBUG = False
@@ -68,12 +69,14 @@ def pact_integer_requantize_add(*t, eps_in_list, eps_out, D=1):
 
 # re-quantize from a lower precision (larger eps_in) to a higher precision (lower eps_out)
 def pact_integer_requantize_concat(*t, eps_in_list, eps_out, D=1):
+    tqs = []
     for i in range(len(eps_in_list)):
         eps_in = eps_in_list[i]
         eps_ratio = (D*eps_in/eps_out).round()
-        t[i] = t[i] * eps_ratio
+        tq = t[i] * eps_ratio
+        tqs.append(tq)
 
-    y = torch.cat(t, dim=1)
+    y = torch.cat(tqs, dim=1)
     y = (y / D).floor()
 
     return y
@@ -515,7 +518,7 @@ class PACT_IntegerConcat(torch.nn.Module):
 
     """
 
-    def __init__(self, alpha=1., precision=None, requantization_factor=DEFAULT_ADD_REQNT_FACTOR):
+    def __init__(self, alpha=1., precision=None, requantization_factor=DEFAULT_CONCAT_REQNT_FACTOR):
         r"""Constructor. Initializes a :py:class:`torch.nn.Parameter` for :math:`\alpha`.
 
         :param precision: instance defining the current quantization level (default `None`).
@@ -556,6 +559,7 @@ class PACT_IntegerConcat(torch.nn.Module):
                 print("[nemo-pact] ERROR! Trying to call forward on a Concat for which eps_in's are not defined")
             elif not hasattr(self, 'eps_out'):
                 self.get_output_eps(self.eps_in_list)
+            print(f"[nemo-pact] IntegerConcat enabled, eps_in {self.eps_in_list}, eps_out{self.eps_out}, D {self.D}")
             return pact_integer_requantize_concat(*x, eps_in_list=self.eps_in_list, eps_out=self.eps_out, D=self.D)
 
 class PACT_IntegerAvgPool2d(torch.nn.AvgPool2d):
